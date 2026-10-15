@@ -140,6 +140,15 @@
             "type": "shell",
             "command": "echo ${command:extension.commandvariable.file.relativeFileDirnamePosix}",
             "problemMatcher": []
+        },
+        {
+            "label": "Validate Python package build",
+            "type": "shell",
+            "command": "cd rpi-rgb-led-matrix && python -m pip install --no-deps --no-cache-dir -v .",
+            "isBackground": false,
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }
