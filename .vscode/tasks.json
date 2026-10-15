@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Validate Python package build",
+			"type": "shell",
+			"command": "cd rpi-rgb-led-matrix && python -m pip install --no-deps --no-cache-dir -v .",
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		}
+	]
+}
