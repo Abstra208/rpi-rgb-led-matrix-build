@@ -4,22 +4,6 @@ from libcpp cimport bool
 from libc.stdint cimport uint8_t, uint32_t, uintptr_t
 import cython
 
-cdef extern from "Python.h":
-    void* PyCapsule_GetPointer(object capsule, const char* name)
-    const char* PyCapsule_GetName(object capsule)
-
-cdef extern from "pillow.h":
-    cdef int** get_image32(void* im)
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef int** get_pillow_buffer(object capsule):
-    cdef void *image
-
-    image = PyCapsule_GetPointer(capsule, PyCapsule_GetName(capsule))
-
-    return get_image32(image)
-
 cdef class Canvas:
     cdef cppinc.Canvas* _getCanvas(self) except *:
         raise Exception("Not implemented")
@@ -29,12 +13,8 @@ cdef class Canvas:
             raise Exception("Currently, only RGB mode is supported for SetImage(). Please create images with mode 'RGB' or convert first with image = image.convert('RGB'). Pull requests to support more modes natively are also welcome :)")
 
         if unsafe:
-            #In unsafe mode we directly access the underlying PIL image array
-            #in cython, which is considered unsafe pointer accecss,
-            #however it's super fast and seems to work fine
-            #https://groups.google.com/forum/#!topic/cython-users/Dc1ft5W6KM4
             img_width, img_height = image.size
-            self.SetPixelsPillow(offset_x, offset_y, img_width, img_height, image.getim())
+            self.SetPixelsPillow(offset_x, offset_y, img_width, img_height, image)
         else:
             # First implementation of a SetImage(). OPTIMIZE_ME: A more native
             # implementation that directly reads the buffer and calls the underlying
@@ -48,23 +28,21 @@ cdef class Canvas:
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    def SetPixelsPillow(self, int xstart, int ystart, int width, int height, object image_capsule):
+    def SetPixelsPillow(self, int xstart, int ystart, int width, int height, object image):
         cdef cppinc.FrameCanvas* my_canvas = <cppinc.FrameCanvas*>self._getCanvas()
         cdef int frame_width = my_canvas.width()
         cdef int frame_height = my_canvas.height()
         cdef int row, col
         cdef uint8_t r, g, b
-        cdef int **buffer
-        cdef int pixel
-
-        buffer = get_pillow_buffer(image_capsule)
+        cdef Py_ssize_t pixel_offset
+        cdef const unsigned char[:] buffer = image.tobytes()
 
         for col in range(max(0, -xstart), min(width, frame_width - xstart)):
             for row in range(max(0, -ystart), min(height, frame_height - ystart)):
-                pixel = buffer[row][col]
-                r = (pixel ) & 0xFF
-                g = (pixel >> 8) & 0xFF
-                b = (pixel >> 16) & 0xFF
+                pixel_offset = (row * width + col) * 3
+                r = buffer[pixel_offset]
+                g = buffer[pixel_offset + 1]
+                b = buffer[pixel_offset + 2]
                 my_canvas.SetPixel(xstart+col, ystart+row, r, g, b)
 
 cdef class FrameCanvas(Canvas):

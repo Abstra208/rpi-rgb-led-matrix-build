@@ -93,7 +93,6 @@ IF(DEFINED SKBUILD)
     # Make the core extension
     python_add_library(core SHARED
         ${PYBINDING_SOURCE_DIR}/core.cpp
-        ${PYBINDING_SOURCE_DIR}/shims/pillow.c
         ${RGBMATRIX_SOURCES}
     )
     set_target_properties(core PROPERTIES LINKER_LANGUAGE CXX)
